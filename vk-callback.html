@@ -3,182 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VK ID — КСТАТИ! О ЖИЗНИ</title>
+<title>VK ID callback — КСТАТИ! О ЖИЗНИ</title>
 <style>
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:820px;margin:40px auto;padding:0 20px;line-height:1.5;color:#102a56;background:#f7fbff}
 .card{border:1px solid #dbe6f3;border-radius:18px;padding:26px;background:#fff;box-shadow:0 8px 30px rgba(16,42,86,.08)}
 h1{margin-top:0}.muted{color:#5f718c}.warn{margin-top:18px;padding:12px 14px;border-radius:10px;background:#fff6d8}
 .ok{margin-top:18px;padding:12px 14px;border-radius:10px;background:#eaf8ef}
 .err{margin-top:18px;padding:12px 14px;border-radius:10px;background:#fff0f0;color:#8b1e1e}
-button{border:0;border-radius:10px;padding:12px 18px;background:#087cf0;color:#fff;font-weight:700;cursor:pointer;font-size:16px}
-button.secondary{background:#eaf2fb;color:#102a56;margin-left:8px}
-textarea{width:100%;min-height:92px;box-sizing:border-box;border:1px solid #cbd8e6;border-radius:10px;padding:10px;font:13px ui-monospace,SFMono-Regular,Consolas,monospace}
+button{border:0;border-radius:10px;padding:9px 14px;background:#eaf2fb;color:#102a56;font-weight:700;cursor:pointer}
+textarea{width:100%;min-height:72px;box-sizing:border-box;border:1px solid #cbd8e6;border-radius:10px;padding:10px;font:13px ui-monospace,SFMono-Regular,Consolas,monospace}
 .row{margin:14px 0}.label{font-weight:700;margin-bottom:6px}code{word-break:break-all;background:#f3f7fb;padding:2px 6px;border-radius:6px}
 </style>
-<script src="https://unpkg.com/@vkid/sdk@2.6.1/dist-sdk/umd/index.js"></script>
 </head>
 <body>
 <div class="card">
-<h1>VK ID — подключение публикации «КСТАТИ! О ЖИЗНИ»</h1>
-<p class="muted">Эта страница выполняет OAuth 2.1 / PKCE только в вашем браузере. Токены не отправляются на GitHub Pages и не сохраняются в репозитории.</p>
-
-<div id="start">
-  <p>Нажмите кнопку, войдите в VK под аккаунтом администратора сообщества и разрешите доступ к фотографиям и стене.</p>
-  <button id="login">Авторизовать VK</button>
-</div>
-
+<h1>VK ID — код авторизации</h1>
+<p class="muted">Эта страница только показывает одноразовые параметры, которые вернул VK ID. Обмен кода на токены должен выполняться на VPS, чтобы пользовательский токен был выдан с IP сервера.</p>
+<div id="empty" style="display:none"><p>Параметры авторизации пока не получены. Сначала запустите подготовку OAuth на VPS и откройте выданную им ссылку.</p></div>
 <div id="result" style="display:none">
-  <div class="ok"><b>Авторизация завершена.</b> Ниже будут показаны токены. Не отправляйте их в чат.</div>
-
-  <div class="row">
-    <div class="label">access_token — временный пользовательский токен</div>
-    <textarea id="access" readonly></textarea>
-    <button class="secondary" data-copy="access">Копировать access_token</button>
-  </div>
-
-  <div class="row">
-    <div class="label">refresh_token — для последующего обновления access_token</div>
-    <textarea id="refresh" readonly></textarea>
-    <button class="secondary" data-copy="refresh">Копировать refresh_token</button>
-  </div>
-
-  <div class="row">
-    <div class="label">device_id</div>
-    <textarea id="device" readonly></textarea>
-    <button class="secondary" data-copy="device">Копировать device_id</button>
-  </div>
-
-  <div class="row">
-    <div class="label">Выданные права</div>
-    <code id="scope"></code>
-  </div>
+  <div class="ok"><b>Авторизация подтверждена.</b> Скопируйте три значения ниже в мастер завершения OAuth на VPS. Не отправляйте их в чат.</div>
+  <div class="row"><div class="label">code</div><textarea id="code" readonly></textarea><button data-copy="code">Копировать code</button></div>
+  <div class="row"><div class="label">device_id</div><textarea id="device" readonly></textarea><button data-copy="device">Копировать device_id</button></div>
+  <div class="row"><div class="label">state</div><textarea id="state" readonly></textarea><button data-copy="state">Копировать state</button></div>
 </div>
-
 <div id="error" class="err" style="display:none"></div>
-
-<div class="warn">
-  <b>Важно:</b> не публикуйте и не присылайте в чат значения <code>access_token</code>, <code>refresh_token</code>, <code>code</code> или защищённый ключ приложения.
+<div class="warn"><b>Важно:</b> не публикуйте и не присылайте в чат значения <code>code</code>, токены или защищённые ключи.</div>
 </div>
-</div>
-
 <script>
-(() => {
-  const APP_ID = 54786572;
-  const REDIRECT = 'https://michsidoroff-sys.github.io/max-kstati-media/vk-callback.html';
-  const SCOPES = 'vkid.personal_info photos wall';
-  const VKID = window.VKIDSDK;
-
-  const qs = new URLSearchParams(location.search);
-  const code = qs.get('code');
-  const deviceId = qs.get('device_id');
-  const returnedState = qs.get('state');
-  const oauthError = qs.get('error');
-
-  const b64url = bytes => {
-    let s = '';
-    bytes.forEach(b => s += String.fromCharCode(b));
-    return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  };
-
-  const newRandom = (n=64) => {
-    const a = new Uint8Array(n);
-    crypto.getRandomValues(a);
-    return b64url(a);
-  };
-
-  const showError = msg => {
-    const el = document.getElementById('error');
-    el.textContent = msg;
-    el.style.display = 'block';
-  };
-
-  if (!VKID) {
-    showError('Не загрузился официальный VK ID SDK. Обновите страницу и попробуйте ещё раз.');
-    return;
-  }
-
-  if (oauthError) {
-    showError('VK ID вернул ошибку: ' + oauthError + (qs.get('error_description') ? ' — ' + qs.get('error_description') : ''));
-    return;
-  }
-
-  let state = sessionStorage.getItem('vk_state');
-  let verifier = sessionStorage.getItem('vk_verifier');
-
-  if (!code) {
-    state = newRandom(24);
-    verifier = newRandom(64);
-    sessionStorage.setItem('vk_state', state);
-    sessionStorage.setItem('vk_verifier', verifier);
-
-    VKID.Config.init({
-      app: APP_ID,
-      redirectUrl: REDIRECT,
-      state,
-      codeVerifier: verifier,
-      scope: SCOPES,
-      mode: VKID.ConfigAuthMode.Redirect
-    });
-
-    document.getElementById('login').onclick = () => {
-      VKID.Auth.login().catch(err => showError('Не удалось начать авторизацию: ' + JSON.stringify(err)));
-    };
-    return;
-  }
-
-  document.getElementById('start').style.display = 'none';
-
-  if (!state || !verifier) {
-    showError('Не найден PKCE-код из начала авторизации. Вернитесь на эту страницу без параметров и начните вход заново.');
-    return;
-  }
-
-  if (returnedState && returnedState !== state) {
-    showError('Проверка state не прошла. Начните авторизацию заново.');
-    return;
-  }
-
-  if (!deviceId) {
-    showError('VK ID не вернул device_id. Начните авторизацию заново.');
-    return;
-  }
-
-  VKID.Config.init({
-    app: APP_ID,
-    redirectUrl: REDIRECT,
-    state,
-    codeVerifier: verifier,
-    scope: SCOPES,
-    mode: VKID.ConfigAuthMode.Redirect
-  });
-
-  VKID.Auth.exchangeCode(code, deviceId, verifier)
-    .then(res => {
-      document.getElementById('access').value = res.access_token || '';
-      document.getElementById('refresh').value = res.refresh_token || '';
-      document.getElementById('device').value = deviceId;
-      document.getElementById('scope').textContent = res.scope || '';
-      document.getElementById('result').style.display = 'block';
-      sessionStorage.removeItem('vk_state');
-      sessionStorage.removeItem('vk_verifier');
-
-      history.replaceState({}, document.title, REDIRECT);
-    })
-    .catch(err => {
-      showError('Ошибка обмена кода на токен: ' + JSON.stringify(err));
-    });
-
-  document.querySelectorAll('[data-copy]').forEach(btn => {
-    btn.onclick = async () => {
-      const id = btn.getAttribute('data-copy');
-      const val = document.getElementById(id).value;
-      await navigator.clipboard.writeText(val);
-      const old = btn.textContent;
-      btn.textContent = 'Скопировано';
-      setTimeout(() => btn.textContent = old, 1200);
-    };
-  });
-})();
+const p=new URLSearchParams(location.search);
+const err=p.get('error');
+if(err){
+ const el=document.getElementById('error');
+ el.textContent='VK ID вернул ошибку: '+err+(p.get('error_description')?' — '+p.get('error_description'):'');
+ el.style.display='block';
+}else if(p.get('code')&&p.get('device_id')){
+ document.getElementById('code').value=p.get('code')||'';
+ document.getElementById('device').value=p.get('device_id')||'';
+ document.getElementById('state').value=p.get('state')||'';
+ document.getElementById('result').style.display='block';
+}else{
+ document.getElementById('empty').style.display='block';
+}
+document.querySelectorAll('[data-copy]').forEach(btn=>btn.onclick=async()=>{
+ const el=document.getElementById(btn.dataset.copy);
+ await navigator.clipboard.writeText(el.value);
+ const old=btn.textContent; btn.textContent='Скопировано'; setTimeout(()=>btn.textContent=old,1200);
+});
 </script>
 </body>
 </html>
