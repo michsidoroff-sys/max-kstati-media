@@ -21,7 +21,7 @@ import sys
 import requests
 
 APP_ID = 54786572
-REDIRECT_URI = "https://michsidoroff-sys.github.io/max-kstati-media/vk-callback.html"
+REDIRECT_URI = "https://michsidoroff-sys.github.io/max-kstati-media/vk-callback-v2.html"
 SCOPES = "vkid.personal_info photos wall"
 OAUTH_URL = "https://id.vk.com/oauth2/auth"
 AUTHORIZE_URL = "https://id.vk.com/authorize"
