@@ -1,0 +1,56 @@
+name: Publish to VK
+
+on:
+  workflow_dispatch:
+    inputs:
+      text_file:
+        description: "Path to UTF-8 post text file"
+        required: true
+        default: "vk/posts/example.txt"
+        type: string
+      image_path:
+        description: "Optional repository path to cover image"
+        required: false
+        default: ""
+        type: string
+      dry_run:
+        description: "Check files/settings only; do not publish"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependency
+        run: python -m pip install --disable-pip-version-check requests
+
+      - name: Publish VK post
+        env:
+          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+          VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
+          VK_USER_TOKEN: ${{ secrets.VK_USER_TOKEN }}
+          VK_API_VERSION: "5.199"
+        run: |
+          ARGS=(--text-file "${{ inputs.text_file }}")
+          if [ -n "${{ inputs.image_path }}" ]; then
+            ARGS+=(--image "${{ inputs.image_path }}")
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS+=(--dry-run)
+          fi
+          python vk_publish.py "${ARGS[@]}"
