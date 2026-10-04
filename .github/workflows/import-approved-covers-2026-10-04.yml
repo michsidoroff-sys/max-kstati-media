@@ -23,18 +23,18 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p covers/2026-10-04
-          curl -fL --retry 2 "$URL_0700" -o covers/2026-10-04/0700.png
-          curl -fL --retry 2 "$URL_1100" -o covers/2026-10-04/1100.png
-          curl -fL --retry 2 "$URL_1500" -o covers/2026-10-04/1500.png
-          curl -fL --retry 2 "$URL_1900" -o covers/2026-10-04/1900.png
-          for f in covers/2026-10-04/*.png; do
-            test "$(xxd -p -l 8 "$f")" = "89504e470d0a1a0a"
+          curl -fL --retry 2 "$URL_0700" -o covers/2026-10-04/0700.jpg
+          curl -fL --retry 2 "$URL_1100" -o covers/2026-10-04/1100.jpg
+          curl -fL --retry 2 "$URL_1500" -o covers/2026-10-04/1500.jpg
+          curl -fL --retry 2 "$URL_1900" -o covers/2026-10-04/1900.jpg
+          for f in covers/2026-10-04/*.jpg; do
+            test "$(od -An -tx1 -N2 "$f" | tr -d ' \n')" = "ffd8"
           done
       - name: Commit covers
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add covers/2026-10-04/0700.png covers/2026-10-04/1100.png covers/2026-10-04/1500.png covers/2026-10-04/1900.png
+          git add covers/2026-10-04/0700.jpg covers/2026-10-04/1100.jpg covers/2026-10-04/1500.jpg covers/2026-10-04/1900.jpg
           git commit -m "Add approved covers for 2026-10-04"
           git push origin main
