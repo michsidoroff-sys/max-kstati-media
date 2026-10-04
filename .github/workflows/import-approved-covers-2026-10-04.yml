@@ -1,0 +1,40 @@
+name: Import approved covers 2026-10-04
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.cover-import-trigger-2026-10-04'
+permissions:
+  contents: write
+jobs:
+  import-covers:
+    if: github.event.head_commit.message == 'Trigger approved cover import for 2026-10-04'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Download approved covers
+        env:
+          URL_0700: 'https://at.adobe.com/mNKGNu6tbixLdhcp'
+          URL_1100: 'https://at.adobe.com/kdK26NIuEg2whgtM'
+          URL_1500: 'https://at.adobe.com/KlVn7DOtBcaLVNdc'
+          URL_1900: 'https://at.adobe.com/Z9IxODnX7la0LtiS'
+        run: |
+          set -euo pipefail
+          mkdir -p covers/2026-10-04
+          curl -fL --retry 2 "$URL_0700" -o covers/2026-10-04/0700.png
+          curl -fL --retry 2 "$URL_1100" -o covers/2026-10-04/1100.png
+          curl -fL --retry 2 "$URL_1500" -o covers/2026-10-04/1500.png
+          curl -fL --retry 2 "$URL_1900" -o covers/2026-10-04/1900.png
+          for f in covers/2026-10-04/*.png; do
+            test "$(xxd -p -l 8 "$f")" = "89504e470d0a1a0a"
+          done
+      - name: Commit covers
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add covers/2026-10-04/0700.png covers/2026-10-04/1100.png covers/2026-10-04/1500.png covers/2026-10-04/1900.png
+          git commit -m "Add approved covers for 2026-10-04"
+          git push origin main
