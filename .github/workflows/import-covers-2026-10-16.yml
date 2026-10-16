@@ -1,0 +1,56 @@
+name: Import covers 2026-10-16
+
+on:
+  push:
+    paths:
+      - ".github/workflows/import-covers-2026-10-16.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  import-covers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download generated covers
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/kstati-covers covers/2026-10-16
+          curl -L --fail --retry 3 "https://at.adobe.com/ZBcvtQPGO2SY3BAq" -o /tmp/kstati-covers/0700.png
+          curl -L --fail --retry 3 "https://at.adobe.com/CrG5ly5lmIilSEVB" -o /tmp/kstati-covers/1100.png
+          curl -L --fail --retry 3 "https://at.adobe.com/RZ3nVzVW4KZlFakw" -o /tmp/kstati-covers/1500.png
+          curl -L --fail --retry 3 "https://at.adobe.com/fomH44UNMu8ezXhB" -o /tmp/kstati-covers/1900.png
+          test "$(stat -c%s /tmp/kstati-covers/0700.png)" -gt 100000
+          test "$(stat -c%s /tmp/kstati-covers/1100.png)" -gt 100000
+          test "$(stat -c%s /tmp/kstati-covers/1500.png)" -gt 100000
+          test "$(stat -c%s /tmp/kstati-covers/1900.png)" -gt 100000
+
+      - name: Convert to repository JPEG format
+        run: |
+          python -m pip install --disable-pip-version-check pillow
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          src = Path("/tmp/kstati-covers")
+          dst = Path("covers/2026-10-16")
+          dst.mkdir(parents=True, exist_ok=True)
+          for slot in ("0700","1100","1500","1900"):
+              im = Image.open(src / f"{slot}.png").convert("RGB")
+              im.save(dst / f"{slot}.jpg", "JPEG", quality=95, optimize=True, progressive=True)
+          PY
+
+      - name: Commit covers and remove one-off workflow
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add covers/2026-10-16
+          git rm .github/workflows/import-covers-2026-10-16.yml
+          git commit -m "Add covers for 2026-10-16"
+          git push
