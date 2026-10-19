@@ -1,0 +1,55 @@
+name: Import covers 2026-10-19
+
+on:
+  push:
+    paths:
+      - ".github/workflows/import-covers-2026-10-19.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  import-covers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download generated covers
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/kstati-covers covers/2026-10-19
+          curl -L --fail --retry 3 "https://at.adobe.com/QMQ9LKp0lR4hJg0T" -o /tmp/kstati-covers/0800.png
+          curl -L --fail --retry 3 "https://at.adobe.com/x8zWmqfTZsKabrZv" -o /tmp/kstati-covers/1300.png
+          curl -L --fail --retry 3 "https://at.adobe.com/34yx2OnwJ1OgNhLr" -o /tmp/kstati-covers/1800.png
+          test "$(stat -c%s /tmp/kstati-covers/0800.png)" -gt 100000
+          test "$(stat -c%s /tmp/kstati-covers/1300.png)" -gt 100000
+          test "$(stat -c%s /tmp/kstati-covers/1800.png)" -gt 100000
+
+      - name: Normalize to 1920x1080 JPEG
+        run: |
+          python -m pip install --disable-pip-version-check pillow
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          src = Path("/tmp/kstati-covers")
+          dst = Path("covers/2026-10-19")
+          dst.mkdir(parents=True, exist_ok=True)
+          for slot in ("0800","1300","1800"):
+              im = Image.open(src / f"{slot}.png").convert("RGB")
+              im = im.resize((1920,1080), Image.Resampling.LANCZOS)
+              im.save(dst / f"{slot}.jpg", "JPEG", quality=95, optimize=True, progressive=True)
+          PY
+
+      - name: Commit covers and remove one-off workflow
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add covers/2026-10-19
+          git rm .github/workflows/import-covers-2026-10-19.yml
+          git commit -m "Add covers for 2026-10-19"
+          git push
