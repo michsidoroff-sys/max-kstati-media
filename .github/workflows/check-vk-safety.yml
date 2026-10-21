@@ -6,6 +6,7 @@ on:
       - 'tests/**'
       - 'vk_vps_publish.py'
       - 'validate_workflow_paths.py'
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
