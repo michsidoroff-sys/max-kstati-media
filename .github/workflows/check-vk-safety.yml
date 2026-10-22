@@ -1,0 +1,26 @@
+name: Check manual VK workflow safety (NO PUBLISHING)
+on:
+  push:
+    paths:
+      - '.github/workflows/**'
+      - 'tests/**'
+      - 'vk_vps_publish.py'
+      - 'validate_workflow_paths.py'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kstati-media-verification-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run shell safety regression without credentials or API calls
+        run: python -m unittest discover -s tests -v

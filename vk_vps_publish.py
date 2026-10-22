@@ -70,11 +70,11 @@ def refresh_user_token(auth: dict) -> str:
     r.raise_for_status()
     data = r.json()
     if data.get("error"):
-        raise VKError(f"VK ID refresh error: {data}")
+        raise VKError("VK ID refresh error; inspect authorization privately without logging the response")
 
     token = data.get("access_token")
     if not token:
-        raise VKError(f"VK ID refresh returned no access_token: {data}")
+        raise VKError("VK ID refresh returned no access_token; response contents suppressed")
 
     auth["access_token"] = token
     if data.get("refresh_token"):

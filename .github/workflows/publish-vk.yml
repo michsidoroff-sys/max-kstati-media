@@ -22,8 +22,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: kstati-manual-vk
+  cancel-in-progress: false
+
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -45,12 +50,17 @@ jobs:
           VK_GROUP_TOKEN: ${{ secrets.VK_GROUP_TOKEN }}
           VK_USER_TOKEN: ${{ secrets.VK_USER_TOKEN }}
           VK_API_VERSION: "5.199"
+          TEXT_FILE: ${{ inputs.text_file }}
+          IMAGE_PATH: ${{ inputs.image_path }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          ARGS=(--text-file "${{ inputs.text_file }}")
-          if [ -n "${{ inputs.image_path }}" ]; then
-            ARGS+=(--image "${{ inputs.image_path }}")
+          set -euo pipefail
+          python validate_workflow_paths.py
+          ARGS=(--text-file "$TEXT_FILE")
+          if [ -n "$IMAGE_PATH" ]; then
+            ARGS+=(--image "$IMAGE_PATH")
           fi
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "$DRY_RUN" = "true" ]; then
             ARGS+=(--dry-run)
           fi
           python vk_publish.py "${ARGS[@]}"
